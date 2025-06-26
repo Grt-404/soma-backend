@@ -1,0 +1,10 @@
+Boulder Detection Statistics Summary
+======================================
+
+ Total Boulders Detected : 6
+ Minimum Diameter        : 5.10 m
+ Maximum Diameter        : 14.14 m
+ Average Diameter        : 7.95 m
+ Median Diameter         : 6.70 m
+ Std. Deviation          : 3.49 m
+ Total Area Covered      : 345.53 sq. meters

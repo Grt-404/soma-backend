@@ -1,0 +1,9 @@
+Flask
+Werkzeug
+Pillow
+numpy
+pandas
+matplotlib
+opencv-python
+scikit-learn
+seaborn
