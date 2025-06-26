@@ -4,6 +4,8 @@ from flask import Flask, request, render_template, send_file
 from werkzeug.utils import secure_filename
 from random import random
 from PIL import Image
+import glob
+from datetime import datetime
 
 from modules.detect_boulders import detect_boulders
 from modules.cluster_boulders import cluster_boulders
@@ -21,6 +23,44 @@ app.config['STATIC_FOLDER'] = 'static'
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(app.config['STATIC_FOLDER'], exist_ok=True)
 
+def cleanup_previous_results():
+    """
+    Clean up previous analysis results to ensure fresh results for new uploads
+    """
+    try:
+        # List of files to clean up
+        files_to_remove = [
+            'preview.jpg',
+            'boulders_detected.jpg',
+            'landslides_detected.jpg',
+            'clustered_boulders_plot.jpg',
+            'risk_heatmap.jpg',
+            'boulders_with_source.jpg',
+            'report.pdf',
+            'boulder_data_clustered.csv',
+            'boulder_points.json',
+            'stats_summary.txt'
+        ]
+        
+        # Remove old result files
+        for filename in files_to_remove:
+            filepath = os.path.join(app.config['STATIC_FOLDER'], filename)
+            if os.path.exists(filepath):
+                os.remove(filepath)
+                print(f"[🗑️] Removed old file: {filename}")
+        
+        # Also clean up any CSV files in the root directory
+        csv_files = glob.glob("boulder_data*.csv")
+        for csv_file in csv_files:
+            if os.path.exists(csv_file):
+                os.remove(csv_file)
+                print(f"[🗑️] Removed old CSV: {csv_file}")
+                
+        print("[✅] Cleanup completed successfully")
+        
+    except Exception as e:
+        print(f"[⚠️] Error during cleanup: {str(e)}")
+
 def convert_tif_to_jpg(image_path):
     """
     Converts a .tif image to .jpg and returns the converted file path.
@@ -28,11 +68,11 @@ def convert_tif_to_jpg(image_path):
     if image_path.lower().endswith('.tif'):
         try:
             img = Image.open(image_path)
-
+            
             # Convert to RGB if necessary
             if img.mode != 'RGB':
                 img = img.convert('RGB')
-
+            
             converted_path = os.path.join(app.config['UPLOAD_FOLDER'], 'converted_image.jpg')
             img.save(converted_path, "JPEG")
             print(f"[✅] Converted .tif to .jpg: {converted_path}")
@@ -45,32 +85,39 @@ def convert_tif_to_jpg(image_path):
 @app.route('/', methods=['GET', 'POST'])
 def index():
     stats_text = "No stats available yet. Upload an image to generate results."
-
+    
     if request.method == 'POST':
         if 'image' not in request.files:
             return "Error: No file part in the request."
         file = request.files['image']
-
+        
         if not file.filename:
             return "Error: No file selected for upload."
-
+        
         if file:
             try:
-                # Save uploaded image
+                # STEP 1: Clean up previous results first
+                print("[🧹] Cleaning up previous analysis results...")
+                cleanup_previous_results()
+                
+                # STEP 2: Save uploaded image
                 filename = secure_filename(file.filename)
                 filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
                 file.save(filepath)
-
-                # Handle .tif conversion if needed
+                print(f"[📁] Saved uploaded file: {filepath}")
+                
+                # STEP 3: Handle .tif conversion if needed
                 processed_filepath = convert_tif_to_jpg(filepath)
                 if not processed_filepath:
                     return "Error: Failed to process .tif image."
-
-                # Generate a preview image for the UI
+                
+                # STEP 4: Generate a preview image for the UI
                 preview_path = os.path.join(app.config['STATIC_FOLDER'], 'preview.jpg')
                 shutil.copy(processed_filepath, preview_path)
-
-                # Full Detection Pipeline
+                print(f"[🖼️] Created preview: {preview_path}")
+                
+                # STEP 5: Run Full Detection Pipeline
+                print("[🔬] Starting analysis pipeline...")
                 detect_boulders(processed_filepath)
                 cluster_boulders()
                 generate_stats()
@@ -79,16 +126,21 @@ def index():
                 generate_pdf()
                 generate_heatmap_json()
                 detect_landslides(processed_filepath)
-
-                # Load stats if available
+                print("[✅] Analysis pipeline completed")
+                
+                # STEP 6: Load fresh stats
                 stats_file = os.path.join(app.config['STATIC_FOLDER'], 'stats_summary.txt')
                 if os.path.exists(stats_file):
                     with open(stats_file, 'r', encoding='utf-8') as f:
                         stats_text = f.read()
-
+                    print("[📊] Loaded fresh statistics")
+                else:
+                    print("[⚠️] Stats file not found after analysis")
+                
             except Exception as e:
+                print(f"[💥] Pipeline Error: {str(e)}")
                 return f"Pipeline Error: {str(e)}"
-
+    
     return render_template('index.html', stats_text=stats_text, random=random)
 
 @app.route('/download-report')
