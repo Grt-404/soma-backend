@@ -3,6 +3,8 @@ def cluster_boulders():
     Clusters detected boulders based on their diameters and visualizes the results.
     """
     import pandas as pd
+    import matplotlib
+    matplotlib.use('Agg')
     import matplotlib.pyplot as plt
     from sklearn.cluster import KMeans
     import os
