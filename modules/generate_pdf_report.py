@@ -135,9 +135,10 @@ def generate_pdf(timestamp=None, output_path=None):
         # Add analysis images
         y = draw_image("1. Original Image", "static/preview.jpg", y)
         y = draw_image("2. Detected Boulders", "static/boulders_detected.jpg", y)
-        y = draw_image("3. Boulder Clustering Analysis", "static/clustered_boulders_plot.jpg", y)
-        y = draw_image("4. Risk Assessment Heatmap", "static/risk_heatmap.jpg", y)
-        y = draw_image("5. Source Point Analysis", "static/boulders_with_source.jpg", y)
+        y = draw_image("3. Detected landslide", "static/landslides_detected.jpg", y)
+        y = draw_image("4. Boulder Clustering Analysis", "static/clustered_boulders_plot.jpg", y)
+        y = draw_image("5. Risk Assessment Heatmap", "static/risk_heatmap.jpg", y)
+        y = draw_image("6. Source Point Analysis", "static/boulders_with_source.jpg", y)
 
         # Add final page with summary
         c.showPage()

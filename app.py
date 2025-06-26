@@ -123,9 +123,10 @@ def index():
                 generate_stats()
                 generate_heatmap()
                 estimate_source()
+                detect_landslides(processed_filepath)
                 generate_pdf()
                 generate_heatmap_json()
-                detect_landslides(processed_filepath)
+                
                 print("[✅] Analysis pipeline completed")
                 
                 # STEP 6: Load fresh stats
