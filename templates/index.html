@@ -417,21 +417,20 @@
                 document.getElementById('theme-icon').textContent = '☀️';
                 document.getElementById('theme-text').textContent = 'Light Mode';
             }
-            
-            // Check if we have results
+
+            const wasProcessing = sessionStorage.getItem('isProcessing');
             const previewImg = document.querySelector('img[src*="preview.jpg"]');
-            if (previewImg && previewImg.complete) {
-                results.style.display = 'block';
-                setTimeout(initializeMap, 500);
-                
-                // Only scroll to results if we just finished processing
-                const wasProcessing = sessionStorage.getItem('isProcessing');
-                if (wasProcessing === 'true') {
-                    sessionStorage.removeItem('isProcessing'); // Clear the flag
-                    scrollToResults();
-                }
+
+            if (wasProcessing === 'true' && previewImg && previewImg.complete) {
+                sessionStorage.removeItem('isProcessing');
+                document.getElementById('results').style.display = 'block';
+                initializeMap();
+                scrollToResults();
+            } else {
+                document.getElementById('results').style.display = 'none';
             }
         });
+
 
 
         //function to handle "Analyze Another Image"

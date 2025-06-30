@@ -85,7 +85,12 @@ def convert_tif_to_jpg(image_path):
 @app.route('/', methods=['GET', 'POST'])
 def index():
     stats_text = "No stats available yet. Upload an image to generate results."
-    
+
+    # ✅ Clean up on fresh GET request
+    if request.method == 'GET':
+        print("[🌙] GET request received — cleaning previous results")
+        cleanup_previous_results()
+
     if request.method == 'POST':
         if 'image' not in request.files:
             return "Error: No file part in the request."
@@ -96,7 +101,7 @@ def index():
         
         if file:
             try:
-                # STEP 1: Clean up previous results first
+                # STEP 1: Clean up again for good measure (you may skip this if done above)
                 print("[🧹] Cleaning up previous analysis results...")
                 cleanup_previous_results()
                 
@@ -143,6 +148,7 @@ def index():
                 return f"Pipeline Error: {str(e)}"
     
     return render_template('index.html', stats_text=stats_text, random=random)
+
 
 @app.route('/download-report')
 def download_report():
