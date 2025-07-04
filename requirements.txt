@@ -1,5 +1,4 @@
 Flask
-gunicorn
 Werkzeug
 Pillow
 numpy
