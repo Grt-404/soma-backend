@@ -5,7 +5,6 @@ from werkzeug.utils import secure_filename
 from random import random
 from PIL import Image
 import glob
-from datetime import datetime
 
 from modules.detect_boulders import detect_boulders
 from modules.cluster_boulders import cluster_boulders
@@ -40,19 +39,19 @@ def cleanup_previous_results():
             'boulder_points.json',
             'stats_summary.txt'
         ]
-
+        
         for filename in files_to_remove:
             filepath = os.path.join(app.config['STATIC_FOLDER'], filename)
             if os.path.exists(filepath):
                 os.remove(filepath)
                 print(f"[🗑️] Removed old file: {filename}")
-
+        
         csv_files = glob.glob("boulder_data*.csv")
         for csv_file in csv_files:
             if os.path.exists(csv_file):
                 os.remove(csv_file)
                 print(f"[🗑️] Removed old CSV: {csv_file}")
-
+        
         print("[✅] Cleanup completed successfully")
 
     except Exception as e:
@@ -65,10 +64,8 @@ def convert_tif_to_jpg(image_path):
     if image_path.lower().endswith('.tif'):
         try:
             img = Image.open(image_path)
-
             if img.mode != 'RGB':
                 img = img.convert('RGB')
-
             converted_path = os.path.join(app.config['UPLOAD_FOLDER'], 'converted_image.jpg')
             img.save(converted_path, "JPEG")
             print(f"[✅] Converted .tif to .jpg: {converted_path}")
@@ -145,7 +142,7 @@ def download_report():
         return send_file(report_path, as_attachment=True)
     return "Error: Report file not found."
 
-# ✅ Glitch-compatible app runner
-if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 3000))
-    app.run(host='0.0.0.0', port=port, debug=False)
+# ✅ For Render/Glitch/Cloud Platforms
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=False)
