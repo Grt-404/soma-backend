@@ -1,0 +1,11 @@
+{
+  "name": "soma-flask",
+  "version": "1.0.0",
+  "main": "app.py",
+  "scripts": {
+    "start": "python3 app.py"
+  },
+  "engines": {
+    "python": "3.x"
+  }
+}
