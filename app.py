@@ -28,7 +28,6 @@ def cleanup_previous_results():
     Clean up previous analysis results to ensure fresh results for new uploads
     """
     try:
-        # List of files to clean up
         files_to_remove = [
             'preview.jpg',
             'boulders_detected.jpg',
@@ -41,23 +40,21 @@ def cleanup_previous_results():
             'boulder_points.json',
             'stats_summary.txt'
         ]
-        
-        # Remove old result files
+
         for filename in files_to_remove:
             filepath = os.path.join(app.config['STATIC_FOLDER'], filename)
             if os.path.exists(filepath):
                 os.remove(filepath)
                 print(f"[🗑️] Removed old file: {filename}")
-        
-        # Also clean up any CSV files in the root directory
+
         csv_files = glob.glob("boulder_data*.csv")
         for csv_file in csv_files:
             if os.path.exists(csv_file):
                 os.remove(csv_file)
                 print(f"[🗑️] Removed old CSV: {csv_file}")
-                
+
         print("[✅] Cleanup completed successfully")
-        
+
     except Exception as e:
         print(f"[⚠️] Error during cleanup: {str(e)}")
 
@@ -68,11 +65,10 @@ def convert_tif_to_jpg(image_path):
     if image_path.lower().endswith('.tif'):
         try:
             img = Image.open(image_path)
-            
-            # Convert to RGB if necessary
+
             if img.mode != 'RGB':
                 img = img.convert('RGB')
-            
+
             converted_path = os.path.join(app.config['UPLOAD_FOLDER'], 'converted_image.jpg')
             img.save(converted_path, "JPEG")
             print(f"[✅] Converted .tif to .jpg: {converted_path}")
@@ -86,7 +82,6 @@ def convert_tif_to_jpg(image_path):
 def index():
     stats_text = "No stats available yet. Upload an image to generate results."
 
-    # ✅ Clean up on fresh GET request
     if request.method == 'GET':
         print("[🌙] GET request received — cleaning previous results")
         cleanup_previous_results()
@@ -95,33 +90,28 @@ def index():
         if 'image' not in request.files:
             return "Error: No file part in the request."
         file = request.files['image']
-        
+
         if not file.filename:
             return "Error: No file selected for upload."
-        
+
         if file:
             try:
-                # STEP 1: Clean up again for good measure (you may skip this if done above)
                 print("[🧹] Cleaning up previous analysis results...")
                 cleanup_previous_results()
-                
-                # STEP 2: Save uploaded image
+
                 filename = secure_filename(file.filename)
                 filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
                 file.save(filepath)
                 print(f"[📁] Saved uploaded file: {filepath}")
-                
-                # STEP 3: Handle .tif conversion if needed
+
                 processed_filepath = convert_tif_to_jpg(filepath)
                 if not processed_filepath:
                     return "Error: Failed to process .tif image."
-                
-                # STEP 4: Generate a preview image for the UI
+
                 preview_path = os.path.join(app.config['STATIC_FOLDER'], 'preview.jpg')
                 shutil.copy(processed_filepath, preview_path)
                 print(f"[🖼️] Created preview: {preview_path}")
-                
-                # STEP 5: Run Full Detection Pipeline
+
                 print("[🔬] Starting analysis pipeline...")
                 detect_boulders(processed_filepath)
                 cluster_boulders()
@@ -131,10 +121,9 @@ def index():
                 detect_landslides(processed_filepath)
                 generate_pdf()
                 generate_heatmap_json()
-                
+
                 print("[✅] Analysis pipeline completed")
-                
-                # STEP 6: Load fresh stats
+
                 stats_file = os.path.join(app.config['STATIC_FOLDER'], 'stats_summary.txt')
                 if os.path.exists(stats_file):
                     with open(stats_file, 'r', encoding='utf-8') as f:
@@ -142,13 +131,12 @@ def index():
                     print("[📊] Loaded fresh statistics")
                 else:
                     print("[⚠️] Stats file not found after analysis")
-                
+
             except Exception as e:
                 print(f"[💥] Pipeline Error: {str(e)}")
                 return f"Pipeline Error: {str(e)}"
-    
-    return render_template('index.html', stats_text=stats_text, random=random)
 
+    return render_template('index.html', stats_text=stats_text, random=random)
 
 @app.route('/download-report')
 def download_report():
@@ -156,10 +144,8 @@ def download_report():
     if os.path.exists(report_path):
         return send_file(report_path, as_attachment=True)
     return "Error: Report file not found."
-   
-if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
- if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 3000))
-    app.run(host="0.0.0.0", port=port)
 
+# ✅ Glitch-compatible app runner
+if __name__ == '__main__':
+    port = int(os.environ.get("PORT", 3000))
+    app.run(host='0.0.0.0', port=port, debug=False)
