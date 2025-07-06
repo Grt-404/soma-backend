@@ -3,6 +3,9 @@ import shutil
 from flask import Flask, request, send_file, jsonify
 from werkzeug.utils import secure_filename
 from flask_cors import CORS
+
+CORS(app, resources={r"/*": {"origins": "https://soma-frontend-git-main-grt-404s-projects.vercel.app"}})
+
 from random import random
 from PIL import Image
 import glob
