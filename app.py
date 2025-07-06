@@ -1,7 +1,8 @@
 import os
 import shutil
-from flask import Flask, request, render_template, send_file
+from flask import Flask, request, send_file, jsonify
 from werkzeug.utils import secure_filename
+from flask_cors import CORS
 from random import random
 from PIL import Image
 import glob
@@ -17,15 +18,14 @@ from modules.detect_landslides import detect_landslides
 
 # App Initialization
 app = Flask(__name__)
+CORS(app)  # Enable CORS for cross-origin frontend calls
+
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['STATIC_FOLDER'] = 'static'
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(app.config['STATIC_FOLDER'], exist_ok=True)
 
 def cleanup_previous_results():
-    """
-    Clean up previous analysis results to ensure fresh results for new uploads
-    """
     try:
         files_to_remove = [
             'preview.jpg',
@@ -39,28 +39,24 @@ def cleanup_previous_results():
             'boulder_points.json',
             'stats_summary.txt'
         ]
-        
         for filename in files_to_remove:
             filepath = os.path.join(app.config['STATIC_FOLDER'], filename)
             if os.path.exists(filepath):
                 os.remove(filepath)
                 print(f"[🗑️] Removed old file: {filename}")
-        
+
         csv_files = glob.glob("boulder_data*.csv")
         for csv_file in csv_files:
             if os.path.exists(csv_file):
                 os.remove(csv_file)
                 print(f"[🗑️] Removed old CSV: {csv_file}")
-        
+
         print("[✅] Cleanup completed successfully")
 
     except Exception as e:
         print(f"[⚠️] Error during cleanup: {str(e)}")
 
 def convert_tif_to_jpg(image_path):
-    """
-    Converts a .tif image to .jpg and returns the converted file path.
-    """
     if image_path.lower().endswith('.tif'):
         try:
             img = Image.open(image_path)
@@ -75,74 +71,69 @@ def convert_tif_to_jpg(image_path):
             return None
     return image_path
 
-@app.route('/', methods=['GET', 'POST'])
-def index():
-    stats_text = "No stats available yet. Upload an image to generate results."
+@app.route('/analyze', methods=['POST'])
+def analyze():
+    cleanup_previous_results()
 
-    if request.method == 'GET':
-        print("[🌙] GET request received — cleaning previous results")
-        cleanup_previous_results()
+    if 'image' not in request.files:
+        return jsonify({"error": "No file part in the request."}), 400
 
-    if request.method == 'POST':
-        if 'image' not in request.files:
-            return "Error: No file part in the request."
-        file = request.files['image']
+    file = request.files['image']
+    if not file.filename:
+        return jsonify({"error": "No file selected for upload."}), 400
 
-        if not file.filename:
-            return "Error: No file selected for upload."
+    try:
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
+        print(f"[📁] Saved uploaded file: {filepath}")
 
-        if file:
-            try:
-                print("[🧹] Cleaning up previous analysis results...")
-                cleanup_previous_results()
+        processed_filepath = convert_tif_to_jpg(filepath)
+        if not processed_filepath:
+            return jsonify({"error": "Failed to process .tif image."}), 500
 
-                filename = secure_filename(file.filename)
-                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                file.save(filepath)
-                print(f"[📁] Saved uploaded file: {filepath}")
+        preview_path = os.path.join(app.config['STATIC_FOLDER'], 'preview.jpg')
+        shutil.copy(processed_filepath, preview_path)
+        print(f"[🖼️] Created preview: {preview_path}")
 
-                processed_filepath = convert_tif_to_jpg(filepath)
-                if not processed_filepath:
-                    return "Error: Failed to process .tif image."
+        print("[🔬] Starting analysis pipeline...")
+        detect_boulders(processed_filepath)
+        cluster_boulders()
+        generate_stats()
+        generate_heatmap()
+        estimate_source()
+        detect_landslides(processed_filepath)
+        generate_pdf()
+        generate_heatmap_json()
+        print("[✅] Analysis pipeline completed")
 
-                preview_path = os.path.join(app.config['STATIC_FOLDER'], 'preview.jpg')
-                shutil.copy(processed_filepath, preview_path)
-                print(f"[🖼️] Created preview: {preview_path}")
+        stats_text = ""
+        stats_file = os.path.join(app.config['STATIC_FOLDER'], 'stats_summary.txt')
+        if os.path.exists(stats_file):
+            with open(stats_file, 'r', encoding='utf-8') as f:
+                stats_text = f.read()
+            print("[📊] Loaded stats")
 
-                print("[🔬] Starting analysis pipeline...")
-                detect_boulders(processed_filepath)
-                cluster_boulders()
-                generate_stats()
-                generate_heatmap()
-                estimate_source()
-                detect_landslides(processed_filepath)
-                generate_pdf()
-                generate_heatmap_json()
+        return jsonify({
+            "status": "success",
+            "preview_url": "/static/preview.jpg",
+            "report_url": "/download-report",
+            "stats_summary": stats_text,
+            "random": random()
+        })
 
-                print("[✅] Analysis pipeline completed")
-
-                stats_file = os.path.join(app.config['STATIC_FOLDER'], 'stats_summary.txt')
-                if os.path.exists(stats_file):
-                    with open(stats_file, 'r', encoding='utf-8') as f:
-                        stats_text = f.read()
-                    print("[📊] Loaded fresh statistics")
-                else:
-                    print("[⚠️] Stats file not found after analysis")
-
-            except Exception as e:
-                print(f"[💥] Pipeline Error: {str(e)}")
-                return f"Pipeline Error: {str(e)}"
-
-    return render_template('index.html', stats_text=stats_text, random=random)
+    except Exception as e:
+        print(f"[💥] Pipeline Error: {str(e)}")
+        return jsonify({"error": f"Pipeline Error: {str(e)}"}), 500
 
 @app.route('/download-report')
 def download_report():
     report_path = os.path.join(app.config['STATIC_FOLDER'], 'report.pdf')
     if os.path.exists(report_path):
         return send_file(report_path, as_attachment=True)
-    return "Error: Report file not found."
+    return jsonify({"error": "Report file not found."}), 404
 
-# ✅ For Render/Glitch/Cloud Platforms
+# Entry point for Render or local dev
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=False)
+    app.run(host="0.0.0.0", port=port)

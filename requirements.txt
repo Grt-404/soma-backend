@@ -1,10 +1,12 @@
 Flask
+gunicorn
+flask-cors
 Werkzeug
-Pillow
 numpy
-pandas
-matplotlib
 opencv-python
+pillow
+matplotlib
+pandas
 scikit-learn
 seaborn
 reportlab

@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Environment
+.env
+venv/
+env/
+
+# Uploads and output
+uploads/
+*.log
+*.sqlite3
+
+# System
+.DS_Store
+Thumbs.db
