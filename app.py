@@ -71,6 +71,10 @@ def convert_tif_to_jpg(image_path):
             return None
     return image_path
 
+@app.route('/')
+def home():
+    return "✅ SOMA Backend is live!"
+
 @app.route('/analyze', methods=['POST'])
 def analyze():
     cleanup_previous_results()
@@ -133,7 +137,6 @@ def download_report():
         return send_file(report_path, as_attachment=True)
     return jsonify({"error": "Report file not found."}), 404
 
-# Entry point for Render or local dev
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
