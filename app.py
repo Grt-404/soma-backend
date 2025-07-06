@@ -4,7 +4,7 @@ from flask import Flask, request, send_file, jsonify
 from werkzeug.utils import secure_filename
 from flask_cors import CORS
 
-CORS(app, resources={r"/*": {"origins": "https://soma-frontend-git-main-grt-404s-projects.vercel.app"}})
+
 
 from random import random
 from PIL import Image
@@ -21,7 +21,7 @@ from modules.detect_landslides import detect_landslides
 
 # App Initialization
 app = Flask(__name__)
-CORS(app)  # Enable CORS for cross-origin frontend calls
+CORS(app, resources={r"/*": {"origins": "https://soma-frontend-git-main-grt-404s-projects.vercel.app"}})  # Enable CORS for cross-origin frontend calls
 
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['STATIC_FOLDER'] = 'static'
